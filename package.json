@@ -1,6 +1,31 @@
 {
-	"name": "@rivet-dev/agent-os-workspace",
+	"name": "@stimulir/code-runtime",
+	"version": "0.1.0",
+	"description": "Stimulir-maintained fork of Rivet agentOS. An embeddable runtime for coding agents — Pi, Claude Code, Codex, Amp, OpenCode — over a unified ACP transcript format with deny-by-default sandboxing, mountable filesystems, and host tool integration.",
 	"private": true,
+	"license": "Apache-2.0",
+	"author": "Stimulir Limited <hello@stimulir.com>",
+	"homepage": "https://github.com/stimulir/code-runtime",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/stimulir/code-runtime.git"
+	},
+	"bugs": {
+		"url": "https://github.com/stimulir/code-runtime/issues"
+	},
+	"keywords": [
+		"agent-os",
+		"coding-agent",
+		"acp",
+		"agent-client-protocol",
+		"sandbox",
+		"runtime",
+		"webassembly",
+		"v8-isolates",
+		"stimulir",
+		"rl-environments",
+		"terminal-bench"
+	],
 	"packageManager": "pnpm@10.13.1",
 	"engines": {
 		"node": ">=20"
@@ -8,6 +33,7 @@
 	"scripts": {
 		"start": "npx turbo watch build",
 		"build": "npx turbo build",
+		"prepare": "if [ -z \"$CI\" ] && [ ! -d \"node_modules\" ]; then pnpm install --frozen-lockfile && pnpm build; fi",
 		"test": "pnpm --dir packages/core build && pnpm --dir packages/dev-shell build && pnpm --dir packages/dev-shell check-types && pnpm --dir packages/dev-shell test && npx turbo test --concurrency=1 --filter='!@rivet-dev/agent-os-dev-shell'",
 		"test:migration-parity": "pnpm --dir packages/core exec vitest run tests/migration-parity.test.ts --reporter=verbose",
 		"test:post-python-parity": "pnpm --dir packages/core build && pnpm --dir packages/core exec vitest run tests/agent-os-base-filesystem.test.ts && pnpm --dir packages/dev-shell exec vitest run test/dev-shell.integration.test.ts && ./node_modules/.bin/vitest run --testTimeout=55000 --hookTimeout=30000 registry/tests/kernel/cross-runtime-terminal.test.ts registry/tests/kernel/ctrl-c-shell-behavior.test.ts registry/tests/kernel/node-binary-behavior.test.ts registry/tests/kernel/e2e-project-matrix.test.ts",
@@ -15,7 +41,8 @@
 		"check-types": "npx turbo check-types --concurrency=1",
 		"lint": "pnpm biome check .",
 		"fmt": "pnpm biome check --write --diagnostic-level=error .",
-		"shell": "pnpm --filter @rivet-dev/agent-os-shell shell"
+		"shell": "pnpm --filter @rivet-dev/agent-os-shell shell",
+		"sync:upstream": "git fetch upstream && git merge upstream/main --no-ff -m \"chore: sync with upstream rivet-dev/agent-os\""
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3",

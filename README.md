@@ -1,9 +1,35 @@
+# @stimulir/code-runtime
+
+> **Stimulir-maintained fork of [Rivet's agentOS](https://github.com/rivet-dev/agent-os).** Apache-2.0. Same architecture as upstream, with extension packages for Stimulir's task-authoring and RL-eval pipelines.
+
+```bash
+# Install directly from GitHub
+pnpm add github:stimulir/code-runtime#main
+```
+
+| Property | Value |
+|---|---|
+| Package name | `@stimulir/code-runtime` |
+| Install | `github:stimulir/code-runtime#<branch-or-sha>` — no npm publish |
+| License | Apache-2.0 (inherited from upstream) |
+| Upstream | [`rivet-dev/agent-os`](https://github.com/rivet-dev/agent-os) — synced periodically via `pnpm run sync:upstream` |
+| Maintainer | Stimulir Limited ([`@tosi-n`](https://github.com/tosi-n)) |
+| Production users | Stimulir Console; Lemon RL-eval pilot |
+
+**Why a fork?** Stimulir needs a single, supported runtime version across its products, the freedom to land extension points ahead of upstream's release cadence, and a clear authoritative source for security review.
+
+**Stimulir-flavored packages** are additive — they live in this monorepo alongside upstream packages and consume them via `workspace:*`. Upstream files are not modified unless unavoidable, so merges stay clean.
+
+---
+
+## Upstream documentation (preserved below)
+
 <p align="center">
   <img src=".github/media/banner.png" alt="agentOS" />
 </p>
 
 <p align="center">
-  A portable open-source operating system for AI agents.<br/>Near-zero cold starts (~6 ms), up to 32x cheaper than sandboxes.<br/>Powered by WebAssembly and V8 isolates.<br/><br/>Supports Pi, Claude Code*, Codex*, Amp*, and OpenCode*<br/><sub>* coming soon</sub>
+  A portable open-source operating system for AI agents.<br/>Near-zero cold starts (~6 ms), up to 32x cheaper than sandboxes.<br/>Powered by WebAssembly and V8 isolates.<br/><br/>Supports Pi, Claude Code, Codex, Amp*, and OpenCode*<br/><sub>* coming soon. Pi, Claude Code, and Codex adapters are available on npm today.</sub>
 </p>
 
 <p align="center">

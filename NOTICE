@@ -1,0 +1,26 @@
+@stimulir/code-runtime
+Copyright (c) 2026 Stimulir Limited and contributors.
+
+This product is a fork of agentOS, originally developed by Rivet, Inc.
+The original work is licensed under the Apache License, Version 2.0.
+
+Portions of this software (the upstream agentOS codebase) are:
+    Copyright (c) 2024-2026 Rivet, Inc.
+    Licensed under the Apache License, Version 2.0.
+
+Original project:
+    https://github.com/rivet-dev/agent-os
+
+This fork:
+    https://github.com/stimulir/code-runtime
+
+The Apache License, Version 2.0 governs both the upstream codebase and
+this fork. A copy of the license is included in the LICENSE file at the
+root of this repository.
+
+Trademark notice: "Rivet" and "agentOS" are trademarks of Rivet, Inc.
+Use of those names in this repository is solely to attribute origin and
+does not imply endorsement.
+
+Trademark notice: "Stimulir" is a trademark of Stimulir Limited. No
+rights in the Stimulir mark are granted by the Apache License.

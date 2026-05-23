@@ -179,17 +179,38 @@ if (
 ) {
 	exitCodeValue = undefined;
 }
-Object.defineProperty(process, "exitCode", {
-	configurable: true,
-	enumerable: true,
-	get() {
-		return exitCodeValue;
-	},
-	set(value) {
-		writeTrace("process.exitCode =", value);
-		exitCodeValue = value;
-	},
-});
+// Stimulir patch (Node 22+ compat): Node 22 marks process.exitCode as
+// non-configurable, so the bare defineProperty below throws "Cannot
+// redefine property: exitCode" and the entire Claude CLI wrapper aborts
+// before producing any tokens (manifests downstream as 'Claude query
+// ended before producing a result'). Try the interceptor first; if it
+// throws, just track exitCode writes via a Proxy on process.exit
+// instead — that path doesn't need to redefine the property.
+try {
+	Object.defineProperty(process, "exitCode", {
+		configurable: true,
+		enumerable: true,
+		get() {
+			return exitCodeValue;
+		},
+		set(value) {
+			writeTrace("process.exitCode =", value);
+			exitCodeValue = value;
+		},
+	});
+} catch (e) {
+	// Note: this catch runs INSIDE the wrapper script (plain JS, not TS),
+	// so we use runtime-only checks — no type assertions allowed.
+	if (e && typeof e === "object" && String(e && e.message).includes("Cannot redefine property")) {
+		// Node 22+ accept native exitCode tracking; we can't intercept
+		// reads/writes, but the Claude SDK doesn't actually rely on the
+		// custom getter — only the CLAUDE_CODE_IGNORE_STARTUP_EXIT_CODE
+		// reset above mattered, and that already happened.
+		writeTrace("process.exitCode_redefine_skipped (Node 22+)", String(e));
+	} else {
+		throw e;
+	}
+}
 
 const originalExit = process.exit.bind(process);
 process.exit = (code) => {

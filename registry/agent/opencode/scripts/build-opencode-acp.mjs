@@ -3550,7 +3550,11 @@ async function main() {
 		}
 
 		run("tar", ["-xzf", tarballPath, "--strip-components=1", "-C", sourceRoot]);
-		run(bunBin, ["install", "--frozen-lockfile"], { cwd: sourceRoot });
+		// Stimulir patch (sync-clean): upstream opencode-v1.3.13 + bun 1.3.x has lockfile drift
+		// that breaks --frozen-lockfile in CI. Drop the flag so install can update the lockfile
+		// to match resolved versions. Safe because we operate on an extracted tarball under
+		// node_modules/.cache, not the project root.
+		run(bunBin, ["install"], { cwd: sourceRoot });
 		await ensureNodeAcpPatch(sourceRoot, tarballPath);
 		await applyNodeAcpRuntimeTweaks(sourceRoot);
 		await assertPreparedSource(sourceRoot);

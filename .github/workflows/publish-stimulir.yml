@@ -1,0 +1,53 @@
+name: Publish @stimulir/code-runtime-*
+
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: 'Filter (default: all stimulir packages). Use e.g. "@stimulir/code-runtime-pi" for one.'
+        required: false
+        default: './registry/stimulir/*'
+  push:
+    tags:
+      - 'stimulir-v*'
+
+permissions:
+  contents: read
+  packages: write   # required for GitHub Packages publish
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node 22 (with GitHub Packages registry)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@stimulir'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all dependencies + stimulir packages
+        # Building everything because @stimulir/code-runtime-software
+        # depends on every @rivet-dev/agent-os-* WASM software pkg.
+        run: pnpm -r build
+
+      - name: Publish stimulir packages to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILTER="${{ inputs.packages }}"
+          if [ -z "$FILTER" ]; then FILTER="./registry/stimulir/*"; fi
+          pnpm --filter "$FILTER" publish --no-git-checks --access restricted
+
+      - name: Summary
+        run: |
+          echo "Published packages:"
+          pnpm --filter "./registry/stimulir/*" exec node -e "console.log('  ' + require('./package.json').name + '@' + require('./package.json').version)"

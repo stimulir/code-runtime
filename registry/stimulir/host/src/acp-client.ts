@@ -7,25 +7,61 @@
  * any of them is the same job:
  *
  *   1. Spawn the binary as a child process
- *   2. Open JSON-RPC over stdin/stdout (the `ndjson` framing the
- *      `@agentclientprotocol/sdk` uses)
- *   3. Call initialize → newSession → prompt
+ *   2. Open ACP over stdin/stdout via `@agentclientprotocol/sdk`'s
+ *      ClientSideConnection + ndJsonStream
+ *   3. Drive the Agent half (initialize → newSession → prompt) AND
+ *      serve the Client half (sessionUpdate notifications,
+ *      requestPermission RPCs, fs/* file I/O, terminal/* command exec)
  *   4. Translate the SDK's `sessionUpdate` notifications into the
  *      canonical Stimulir trajectory event shape so downstream tools
  *      (Lemon Tasker, Verifiers rollouts, run analyzer) all see the
  *      same event types regardless of which agent produced them.
  *
- * This module owns step 1+2+4. Each adapter package (codex /
- * claude-code / opencode / vibe) provides the binary path + adapter
- * name + any per-agent prompt-prep, and gets back an
- * `AgentSessionLike` ready for `.subscribe()` and `.prompt()`.
- *
  * The Pi adapter does NOT go through this — it loads the Pi SDK
  * in-process for the cleanest trajectory stream (the original Lemon
  * Tasker reason for avoiding the ACP subprocess hop).
+ *
+ * HISTORY: v0.1.4 and below shipped a minimal hand-rolled JSON-RPC
+ * client that only handled agent→client `sessionUpdate` notifications.
+ * That left every client→agent RPC (terminal/create, fs/read_text_file,
+ * session/request_permission, etc.) silently unanswered, which made
+ * any mode-respecting agent (Claude SDK especially) hang on the first
+ * tool call. v0.1.5 swaps in @agentclientprotocol/sdk's full
+ * ClientSideConnection — see the LemonAcpClient class below for the
+ * client-side method implementations (terminals proxied to local
+ * child_process.spawn, fs proxied to node:fs/promises, permissions
+ * auto-allowed).
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
+import * as fs from "node:fs/promises";
+import { Readable, Writable } from "node:stream";
+import { randomUUID } from "node:crypto";
+import {
+	ClientSideConnection,
+	ndJsonStream,
+	type Client,
+	type Stream,
+} from "@agentclientprotocol/sdk";
+import type {
+	CreateTerminalRequest,
+	CreateTerminalResponse,
+	KillTerminalRequest,
+	KillTerminalResponse,
+	ReadTextFileRequest,
+	ReadTextFileResponse,
+	ReleaseTerminalRequest,
+	ReleaseTerminalResponse,
+	RequestPermissionRequest,
+	RequestPermissionResponse,
+	SessionNotification,
+	TerminalOutputRequest,
+	TerminalOutputResponse,
+	WaitForTerminalExitRequest,
+	WaitForTerminalExitResponse,
+	WriteTextFileRequest,
+	WriteTextFileResponse,
+} from "@agentclientprotocol/sdk/dist/schema/types.gen.js";
 
 // ── Canonical event shape ──────────────────────────────────────────────
 //
@@ -57,8 +93,6 @@ export interface CanonicalEvent {
 	[k: string]: unknown;
 }
 
-// ── ACP subprocess client ──────────────────────────────────────────────
-
 export interface AcpSpawnOptions {
 	/** Path to the ACP binary (e.g. resolved via require.resolve). */
 	binaryPath: string;
@@ -69,8 +103,8 @@ export interface AcpSpawnOptions {
 	/** Environment overrides (merged onto process.env). */
 	env?: Record<string, string | undefined>;
 	/** Maps an SDK-native sessionUpdate notification → canonical event.
-	 *  Default: best-effort generic mapping that catches the common
-	 *  `agent_message_chunk` / `tool_call_update` shapes. */
+	 *  Default: best-effort generic mapping that catches every shape in
+	 *  the @agentclientprotocol/sdk zSessionUpdate union. */
 	translate?: (sdkNotification: unknown) => CanonicalEvent | null;
 }
 
@@ -115,8 +149,6 @@ export function defaultAcpTranslate(notif: unknown): CanonicalEvent | null {
 	if (!update) {
 		return { type: "session_meta", raw: n };
 	}
-	// Content chunks — text delta with channel tag so downstream tooling
-	// can distinguish thinking vs assistant vs (echoed) user content.
 	if (
 		update === "agent_message_chunk" ||
 		update === "agent_thought_chunk" ||
@@ -132,11 +164,6 @@ export function defaultAcpTranslate(notif: unknown): CanonicalEvent | null {
 					: "assistant";
 		return { type: "text_delta", text, channel };
 	}
-	// Initial tool announcement — the Claude SDK emits this BEFORE the
-	// tool runs. Map to tool_execution_start so watchdogs + analyzers
-	// register the inflight call immediately. `title` carries the tool
-	// label (Bash / Read / Edit etc.); `kind` is the ACP category
-	// (execute / read / edit etc.). Either makes a reasonable toolName.
 	if (update === "tool_call") {
 		const toolCallId = (n.toolCallId ?? n.tool_call_id) as string | undefined;
 		const toolName = (n.title ?? n.kind) as string | undefined;
@@ -184,130 +211,322 @@ export function defaultAcpTranslate(notif: unknown): CanonicalEvent | null {
 	if (update === "turn_end" || update === "agent_turn_end") {
 		return { type: "turn_end" };
 	}
-	// Plan / mode / config / session_info / usage updates — preserve
-	// the raw payload as session_meta so downstream consumers can opt
-	// in if they care.
 	return { type: "session_meta", raw: n };
 }
 
+// ── Client implementation ──────────────────────────────────────────────
+//
+// Implements the @agentclientprotocol/sdk Client interface. The agent
+// makes RPCs into us (via ClientSideConnection) for permissions, fs
+// access, and terminal command execution. We auto-allow permissions
+// (per-tool gating is enforced at the rl-env watchdog level), proxy
+// fs through node:fs/promises, and spawn shell commands for terminals.
+
+interface TerminalState {
+	child: ChildProcess;
+	// Bounded ring of captured output. The agent polls via terminalOutput
+	// without waiting; we truncate from the start once outputByteLimit
+	// is exceeded so long-running processes don't OOM the runner.
+	output: Buffer;
+	outputByteLimit: number;
+	truncated: boolean;
+	exitCode: number | null;
+	signal: NodeJS.Signals | null;
+	exitPromise: Promise<void>;
+}
+
+class LemonAcpClient implements Client {
+	private subscribers: Array<(ev: CanonicalEvent) => void> = [];
+	private terminals = new Map<string, TerminalState>();
+	constructor(
+		private readonly translate: (
+			n: unknown,
+		) => CanonicalEvent | null = defaultAcpTranslate,
+	) {}
+
+	subscribe(handler: (ev: CanonicalEvent) => void): void {
+		this.subscribers.push(handler);
+	}
+
+	// ── Client method: notifications ────────────────────────────────────
+
+	async sessionUpdate(notif: SessionNotification): Promise<void> {
+		// The SDK delivers SessionNotification = { sessionId, update: zSessionUpdate }.
+		// Our translator works on the inner update payload.
+		const update = (notif as unknown as { update?: unknown })?.update ?? notif;
+		const ev = this.translate(update);
+		if (ev) {
+			for (const s of this.subscribers) {
+				try {
+					s(ev);
+				} catch {
+					// subscriber errors must not poison the stream
+				}
+			}
+		}
+	}
+
+	// ── Client method: permissions ──────────────────────────────────────
+
+	async requestPermission(
+		params: RequestPermissionRequest,
+	): Promise<RequestPermissionResponse> {
+		// Auto-select the first "allow" option. Falls back to optionId[0]
+		// if no explicitly-named allow exists. Rl-env's per-tool-call
+		// watchdog (in run-code-runtime-task.ts) is the real safety net;
+		// asking the user per-tool would defeat the whole automation.
+		const options = (params as unknown as { options?: Array<{ optionId?: string; kind?: string }> })
+			.options ?? [];
+		const pick =
+			options.find((o) => o.kind === "allow_always" || o.kind === "allow_once") ??
+			options[0];
+		const optionId = (pick?.optionId as string) ?? "allow";
+		return {
+			outcome: { outcome: "selected", optionId },
+		} as RequestPermissionResponse;
+	}
+
+	// ── Client method: filesystem ───────────────────────────────────────
+
+	async readTextFile(params: ReadTextFileRequest): Promise<ReadTextFileResponse> {
+		const p = params as unknown as { path: string; line?: number; limit?: number };
+		const raw = await fs.readFile(p.path, "utf-8");
+		// Honor line + limit per spec (1-indexed line, count chars).
+		let content = raw;
+		if (typeof p.line === "number" || typeof p.limit === "number") {
+			const lines = raw.split("\n");
+			const start = Math.max(0, (p.line ?? 1) - 1);
+			const end = typeof p.limit === "number" ? start + p.limit : lines.length;
+			content = lines.slice(start, end).join("\n");
+		}
+		return { content } as ReadTextFileResponse;
+	}
+
+	async writeTextFile(
+		params: WriteTextFileRequest,
+	): Promise<WriteTextFileResponse> {
+		const p = params as unknown as { path: string; content: string };
+		await fs.writeFile(p.path, p.content, "utf-8");
+		return {} as WriteTextFileResponse;
+	}
+
+	// ── Client method: terminals ────────────────────────────────────────
+
+	async createTerminal(
+		params: CreateTerminalRequest,
+	): Promise<CreateTerminalResponse> {
+		const p = params as unknown as {
+			command: string;
+			args?: string[];
+			cwd?: string | null;
+			env?: Array<{ name: string; value: string }>;
+			outputByteLimit?: number | null;
+		};
+		const env = { ...process.env } as Record<string, string>;
+		for (const e of p.env ?? []) {
+			if (e?.name) env[e.name] = String(e.value ?? "");
+		}
+		const child = spawn(p.command, p.args ?? [], {
+			cwd: p.cwd ?? undefined,
+			env,
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		const limit = p.outputByteLimit ?? 1_048_576; // 1 MiB default
+		const state: TerminalState = {
+			child,
+			output: Buffer.alloc(0),
+			outputByteLimit: limit,
+			truncated: false,
+			exitCode: null,
+			signal: null,
+			exitPromise: new Promise<void>((resolve) => {
+				child.on("exit", (code, signal) => {
+					state.exitCode = code;
+					state.signal = signal;
+					resolve();
+				});
+			}),
+		};
+		const append = (chunk: Buffer) => {
+			state.output = Buffer.concat([state.output, chunk]);
+			if (state.output.byteLength > state.outputByteLimit) {
+				// Truncate from the start so the most recent output is
+				// retained — that's where most tool consumers look.
+				state.output = state.output.subarray(
+					state.output.byteLength - state.outputByteLimit,
+				);
+				state.truncated = true;
+			}
+		};
+		child.stdout?.on("data", append);
+		child.stderr?.on("data", append);
+		const terminalId = randomUUID();
+		this.terminals.set(terminalId, state);
+		return { terminalId } as CreateTerminalResponse;
+	}
+
+	async terminalOutput(
+		params: TerminalOutputRequest,
+	): Promise<TerminalOutputResponse> {
+		const p = params as unknown as { terminalId: string };
+		const t = this.terminals.get(p.terminalId);
+		if (!t) {
+			throw new Error(`Unknown terminalId: ${p.terminalId}`);
+		}
+		const exitStatus =
+			t.exitCode !== null || t.signal !== null
+				? {
+						exitCode: t.exitCode,
+						signal: t.signal,
+					}
+				: null;
+		return {
+			output: t.output.toString("utf-8"),
+			truncated: t.truncated,
+			exitStatus,
+		} as TerminalOutputResponse;
+	}
+
+	async waitForTerminalExit(
+		params: WaitForTerminalExitRequest,
+	): Promise<WaitForTerminalExitResponse> {
+		const p = params as unknown as { terminalId: string };
+		const t = this.terminals.get(p.terminalId);
+		if (!t) {
+			throw new Error(`Unknown terminalId: ${p.terminalId}`);
+		}
+		await t.exitPromise;
+		return {
+			exitCode: t.exitCode,
+			signal: t.signal,
+		} as WaitForTerminalExitResponse;
+	}
+
+	async killTerminal(
+		params: KillTerminalRequest,
+	): Promise<KillTerminalResponse> {
+		const p = params as unknown as { terminalId: string };
+		const t = this.terminals.get(p.terminalId);
+		if (!t) return {} as KillTerminalResponse;
+		try {
+			t.child.kill("SIGTERM");
+		} catch {
+			// already dead
+		}
+		// Escalate to SIGKILL after 3s
+		setTimeout(() => {
+			try {
+				t.child.kill("SIGKILL");
+			} catch {
+				/* ignore */
+			}
+		}, 3000).unref();
+		return {} as KillTerminalResponse;
+	}
+
+	async releaseTerminal(
+		params: ReleaseTerminalRequest,
+	): Promise<ReleaseTerminalResponse> {
+		const p = params as unknown as { terminalId: string };
+		const t = this.terminals.get(p.terminalId);
+		if (t) {
+			try {
+				t.child.kill("SIGTERM");
+			} catch {
+				/* ignore */
+			}
+			this.terminals.delete(p.terminalId);
+		}
+		return {} as ReleaseTerminalResponse;
+	}
+
+	// Killswitch for session teardown — release every terminal we still hold.
+	releaseAll(): void {
+		for (const [id, t] of this.terminals) {
+			try {
+				t.child.kill("SIGTERM");
+			} catch {
+				/* ignore */
+			}
+			this.terminals.delete(id);
+		}
+	}
+}
+
+// ── Spawn ─────────────────────────────────────────────────────────────
+
 /**
- * Spawn an ACP binary and return an AcpClient wrapping it. JSON-RPC is
- * speaking newline-delimited JSON over stdin/stdout (the
- * `@agentclientprotocol/sdk` `ndJsonStream` convention).
+ * Spawn an ACP binary and return an AcpClient wrapping it. Uses
+ * @agentclientprotocol/sdk's ClientSideConnection for full ACP coverage
+ * (every method in the Agent + Client interfaces, schema-validated).
  *
- * IMPLEMENTATION NOTE: this is a minimal hand-rolled JSON-RPC client
- * scoped to what every ACP agent needs (initialize, newSession, prompt,
- * cancel, subscribe to sessionUpdate notifications). For full ACP
- * coverage (loadSession, forkSession, mode switches, etc.) callers
- * should fall back to `@agentclientprotocol/sdk`'s ClientSideConnection
- * directly via the `child` accessor.
+ * Capabilities advertised:
+ *   fs.readTextFile = true       (LemonAcpClient.readTextFile)
+ *   fs.writeTextFile = true      (LemonAcpClient.writeTextFile)
+ *   terminal = true              (LemonAcpClient.createTerminal et al.)
+ *
+ * Mode: bypassPermissions (when advertised by the agent). The rl-env
+ * watchdog enforces per-tool-call wall-time limits + workspace-scoped
+ * process cleanup, which is the right place for safety in an automated
+ * eval pipeline.
  */
 export async function spawnAcpClient(
 	opts: AcpSpawnOptions,
 ): Promise<AcpClient> {
 	const child = spawn(opts.binaryPath, opts.args ?? [], {
 		cwd: opts.cwd,
+		// inherit stderr so upstream binary's diagnostics surface to the
+		// parent runner's tty / scorecard.
 		stdio: ["pipe", "pipe", "inherit"],
 		env: { ...process.env, ...opts.env },
 	});
-	const translate = opts.translate ?? defaultAcpTranslate;
-	const subscribers: Array<(ev: CanonicalEvent) => void> = [];
-	let sessionId = "";
-	let nextId = 1;
-	const pending = new Map<number, {
-		resolve: (v: unknown) => void;
-		reject: (e: unknown) => void;
-	}>();
+	if (!child.stdin || !child.stdout) {
+		throw new Error("spawn returned child without stdin/stdout pipes");
+	}
 
-	// ── ndjson parser on stdout ──
-	let buf = "";
-	child.stdout!.on("data", (chunk: Buffer) => {
-		buf += chunk.toString("utf-8");
-		let nl: number;
-		while ((nl = buf.indexOf("\n")) >= 0) {
-			const line = buf.slice(0, nl).trim();
-			buf = buf.slice(nl + 1);
-			if (!line) continue;
-			let msg: Record<string, unknown>;
-			try {
-				msg = JSON.parse(line) as Record<string, unknown>;
-			} catch {
-				continue;
-			}
-			// JSON-RPC response (has id)
-			if (typeof msg.id === "number") {
-				const p = pending.get(msg.id);
-				if (p) {
-					pending.delete(msg.id);
-					if ("error" in msg) p.reject(msg.error);
-					else p.resolve(msg.result);
-				}
-				continue;
-			}
-			// JSON-RPC notification (no id; has method)
-			if (typeof msg.method === "string") {
-				if (msg.method === "session/update" || msg.method === "sessionUpdate") {
-					const params = msg.params as Record<string, unknown> | undefined;
-					const update = params?.update ?? params;
-					const ev = translate(update);
-					if (ev) {
-						for (const s of subscribers) s(ev);
-					}
-				}
-			}
-		}
+	// Bridge Node streams ↔ Web streams. Node 22+ has these built in.
+	const stream: Stream = ndJsonStream(
+		Writable.toWeb(child.stdin) as unknown as WritableStream<Uint8Array>,
+		Readable.toWeb(child.stdout) as unknown as ReadableStream<Uint8Array>,
+	);
+
+	const client = new LemonAcpClient(opts.translate ?? defaultAcpTranslate);
+	const conn = new ClientSideConnection(() => client, stream);
+
+	// ── Handshake ──
+	// Advertise full capability set so the agent uses our terminals + fs
+	// rather than spawning its own (Claude SDK respects this; codex/
+	// opencode/vibe partially respect it).
+	await conn.initialize({
+		protocolVersion: 1,
+		clientCapabilities: {
+			fs: { readTextFile: true, writeTextFile: true },
+			terminal: true,
+		},
 	});
-
-	function send(method: string, params: Record<string, unknown>): Promise<unknown> {
-		const id = nextId++;
-		const msg = JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n";
-		return new Promise((resolve, reject) => {
-			pending.set(id, { resolve, reject });
-			child.stdin!.write(msg);
-		});
-	}
-	function notify(method: string, params: Record<string, unknown>): void {
-		const msg = JSON.stringify({ jsonrpc: "2.0", method, params }) + "\n";
-		child.stdin!.write(msg);
-	}
-
-	// ── Handshake: initialize → session/new → session/set_mode ──
-	//
-	// The ACP zod schema (zNewSessionRequest in @agentclientprotocol/sdk)
-	// requires BOTH `cwd: string` AND `mcpServers: McpServer[]`. Empty
-	// array is the canonical "no MCP servers" form — leaving the field
-	// off entirely makes the upstream binary reject the request with
-	// "Invalid params" in <1s before any agent work begins. Bug reproed
-	// against @rivet-dev/agent-os-claude@0.1.1 / claude-sdk-acp.
-	await send("initialize", { protocolVersion: 1 });
-	const sessRes = (await send("session/new", {
+	const sessRes = await conn.newSession({
 		cwd: opts.cwd,
 		mcpServers: [],
-	})) as Record<string, unknown> | undefined;
-	sessionId = (sessRes?.sessionId as string) ?? `acp-${Date.now()}`;
-	// New sessions default to mode='default' which means every tool call
-	// triggers a `session/request_permission` callback to the client.
-	// This hand-rolled client doesn't implement the permission handler
-	// (full ACP server-side would), so any agent that respects modes
-	// (Claude SDK does — opencode/codex/vibe ignore it) would hang
-	// waiting for our reply. Setting bypassPermissions immediately lets
-	// the agent run tools without round-tripping us for each one. If
-	// the agent doesn't advertise bypassPermissions in availableModes
-	// the SDK will reject the request — we swallow it as best-effort.
-	const modes = sessRes?.modes as
-		| { availableModes?: Array<{ id?: string }> }
-		| undefined;
-	const hasByPass = (modes?.availableModes ?? []).some(
+	});
+	const sessionId = sessRes.sessionId;
+
+	// Bypass per-tool permission prompts. The rl-env watchdog enforces
+	// time + process-leak limits at a layer the agent can't see, which
+	// is the right enforcement point for batched eval runs.
+	const modes = (sessRes as unknown as {
+		modes?: { availableModes?: Array<{ id?: string }> };
+	}).modes;
+	const hasBypass = (modes?.availableModes ?? []).some(
 		(m) => m?.id === "bypassPermissions",
 	);
-	if (hasByPass) {
+	if (hasBypass) {
 		try {
-			await send("session/set_mode", {
+			await conn.setSessionMode({
 				sessionId,
 				modeId: "bypassPermissions",
 			});
 		} catch {
-			// best-effort — log via stderr would be noisier than helpful
+			// best-effort
 		}
 	}
 
@@ -317,23 +536,19 @@ export async function spawnAcpClient(
 			return sessionId;
 		},
 		subscribe(handler) {
-			subscribers.push(handler);
+			client.subscribe(handler);
 		},
 		async prompt(text) {
-			await send("session/prompt", {
+			await conn.prompt({
 				sessionId,
 				prompt: [{ type: "text", text }],
 			});
 		},
 		async cancel() {
-			notify("session/cancel", { sessionId });
+			await conn.cancel({ sessionId });
 		},
 		async close() {
-			try {
-				notify("shutdown", {});
-			} catch {
-				// best effort
-			}
+			client.releaseAll();
 			child.kill("SIGTERM");
 			await new Promise<void>((resolve) => {
 				if (child.exitCode !== null) return resolve();
@@ -345,7 +560,7 @@ export async function spawnAcpClient(
 						/* ignore */
 					}
 					resolve();
-				}, 3000);
+				}, 3000).unref();
 			});
 		},
 	};

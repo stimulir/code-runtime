@@ -1,6 +1,6 @@
 {
 	"name": "@stimulir/code-runtime-host",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "Portable host-side runtime primitives for Stimulir code-runtime adapters: trajectory writer, per-tool-call watchdog, end-of-run process cleanup. Ported from the Lemon Tasker (rl-env) golden-standard implementation.",
 	"type": "module",
 	"license": "Apache-2.0",
@@ -39,6 +39,10 @@
 	"scripts": {
 		"build": "tsc",
 		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@agentclientprotocol/sdk": "^0.16.1",
+		"zod": "^4.4.3"
 	},
 	"devDependencies": {
 		"@types/node": "^22.10.2",

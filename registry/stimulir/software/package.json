@@ -1,6 +1,6 @@
 {
 	"name": "@stimulir/code-runtime-software",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "Stimulir software meta-package. Re-exports the upstream WASM software bundle every coding agent depends on (coreutils, common, git, curl, jq, ripgrep, fd, findutils, sed, grep, gawk, tar, gzip, make, plus diffutils/tree/file/sqlite3/zip/unzip/wget/yq/duckdb). Provides preset bundles — codingAgentBundle, dataAnalysisBundle — so AgentOs.create({software: codingAgentBundle}) is one import.",
 	"type": "module",
 	"license": "Apache-2.0",

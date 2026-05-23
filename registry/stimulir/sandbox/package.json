@@ -1,6 +1,6 @@
 {
 	"name": "@stimulir/code-runtime-sandbox",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "Stimulir sandbox toolkit wrapper. Re-exports @rivet-dev/agent-os-sandbox toolkit + provides a place for the sandbox-mounting drivers (local, docker, e2b) when they're vendored. Upstream sandbox drivers live in rivet-dev/rivet/agent-os/packages and are pulled in lazily on demand.",
 	"type": "module",
 	"license": "Apache-2.0",

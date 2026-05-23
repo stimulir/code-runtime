@@ -35,15 +35,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build @stimulir/* + transitive dependencies
-        # Use `@stimulir/*...` filter so we only pull in dep-graph reachable
-        # from our packages. Avoids upstream packages with broken build
-        # steps (e.g. agent-os-opencode bun lockfile drift) when they're
-        # not actually on the publish path. The @stimulir/code-runtime-software
-        # meta-pkg pulls in every WASM software dep via workspace:* so they'll
-        # still build.
+        # turbo respects the dep graph (`dependsOn: ["^build"]`) so packages
+        # build in topological order. Use --continue so a broken upstream
+        # transitive dep doesn't abort the whole pipeline — the @stimulir
+        # packages themselves only fail when their direct deps fail.
         run: |
-          set +e
-          pnpm --filter "@stimulir/*..." build
+          npx turbo run build --filter='@stimulir/*...' --continue
           rc=$?
           if [ $rc -ne 0 ]; then
             echo "WARN: some transitive builds failed (likely upstream-only)."

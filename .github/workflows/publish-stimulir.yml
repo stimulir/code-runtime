@@ -34,11 +34,17 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Build foundation packages first
+        # Most upstream WASM software pkgs depend on registry-types and core
+        # as devDeps via `link:` protocol — turbo's workspace task graph
+        # doesn't see link: edges, so it parallelizes them with downstream
+        # tsc and breaks. Build the foundations explicitly first.
+        run: pnpm --filter @rivet-dev/agent-os-core --filter @rivet-dev/agent-os-registry-types build
+
       - name: Build @stimulir/* + transitive dependencies
-        # turbo respects the dep graph (`dependsOn: ["^build"]`) so packages
-        # build in topological order. Use --continue so a broken upstream
-        # transitive dep doesn't abort the whole pipeline — the @stimulir
-        # packages themselves only fail when their direct deps fail.
+        # Now the foundations exist; turbo + --continue handles the rest.
+        # `--continue` keeps building independent siblings when one fails
+        # (e.g. opencode lockfile drift is contained).
         run: |
           npx turbo run build --filter='@stimulir/*...' --continue
           rc=$?

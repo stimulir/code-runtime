@@ -1,6 +1,6 @@
 {
 	"name": "@stimulir/code-runtime-host",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Portable host-side runtime primitives for Stimulir code-runtime adapters: trajectory writer, per-tool-call watchdog, end-of-run process cleanup. Ported from the Lemon Tasker (rl-env) golden-standard implementation.",
 	"type": "module",
 	"license": "Apache-2.0",

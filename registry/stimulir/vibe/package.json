@@ -1,6 +1,6 @@
 {
 	"name": "@stimulir/code-runtime-vibe",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Stimulir-flavored Mistral Vibe adapter. Spawns the `vibe-acp` Python binary (from `pip install mistral-vibe`) as a subprocess, speaks ACP JSON-RPC over stdio, and translates Vibe's native event stream into Stimulir's canonical trajectory event shape — the same one every other adapter (pi/codex/claude-code/opencode) emits, so Lemon Tasker can drive Vibe behind --agent stimulir-vibe with no per-adapter branching. Prerequisite: `pip install mistral-vibe` so `vibe-acp` is on PATH.",
 	"type": "module",
 	"license": "Apache-2.0",

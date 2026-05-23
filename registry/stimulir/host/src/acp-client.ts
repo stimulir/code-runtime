@@ -271,7 +271,7 @@ export async function spawnAcpClient(
 		child.stdin!.write(msg);
 	}
 
-	// ── Handshake: initialize → session/new ──
+	// ── Handshake: initialize → session/new → session/set_mode ──
 	//
 	// The ACP zod schema (zNewSessionRequest in @agentclientprotocol/sdk)
 	// requires BOTH `cwd: string` AND `mcpServers: McpServer[]`. Empty
@@ -285,6 +285,31 @@ export async function spawnAcpClient(
 		mcpServers: [],
 	})) as Record<string, unknown> | undefined;
 	sessionId = (sessRes?.sessionId as string) ?? `acp-${Date.now()}`;
+	// New sessions default to mode='default' which means every tool call
+	// triggers a `session/request_permission` callback to the client.
+	// This hand-rolled client doesn't implement the permission handler
+	// (full ACP server-side would), so any agent that respects modes
+	// (Claude SDK does — opencode/codex/vibe ignore it) would hang
+	// waiting for our reply. Setting bypassPermissions immediately lets
+	// the agent run tools without round-tripping us for each one. If
+	// the agent doesn't advertise bypassPermissions in availableModes
+	// the SDK will reject the request — we swallow it as best-effort.
+	const modes = sessRes?.modes as
+		| { availableModes?: Array<{ id?: string }> }
+		| undefined;
+	const hasByPass = (modes?.availableModes ?? []).some(
+		(m) => m?.id === "bypassPermissions",
+	);
+	if (hasByPass) {
+		try {
+			await send("session/set_mode", {
+				sessionId,
+				modeId: "bypassPermissions",
+			});
+		} catch {
+			// best-effort — log via stderr would be noisier than helpful
+		}
+	}
 
 	return {
 		child,

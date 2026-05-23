@@ -1,6 +1,6 @@
 {
 	"name": "@stimulir/code-runtime-pi",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"description": "Stimulir-flavored Pi adapter. Wraps @rivet-dev/agent-os-pi + @mariozechner/pi-coding-agent with explicit AuthStorage/ModelRegistry/SettingsManager/ResourceLoader/SessionManager wire-up (the Lemon Tasker golden standard). Exposes createPiAdapter(spec) — a single-call session factory that materializes per-session Pi config, calls createStimulirAgentSession, and returns a session you can subscribe + prompt on.",
 	"type": "module",
 	"license": "Apache-2.0",

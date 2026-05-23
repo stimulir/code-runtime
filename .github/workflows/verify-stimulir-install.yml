@@ -1,0 +1,95 @@
+name: Verify @stimulir/code-runtime-* install
+
+# Runs after every successful publish-stimulir.yml to prove the packages
+# can be installed from GitHub Packages exactly as a downstream consumer
+# would (private registry + token auth).
+#
+# Also triggerable manually via workflow_dispatch.
+
+on:
+  workflow_run:
+    workflows: ["Publish @stimulir/code-runtime-*"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  install-from-registry:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Configure .npmrc for @stimulir scope
+        run: |
+          mkdir -p /tmp/install-test && cd /tmp/install-test
+          cat > .npmrc <<EOF
+          @stimulir:registry=https://npm.pkg.github.com
+          //npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}
+          always-auth=true
+          EOF
+          cat > package.json <<'EOF'
+          {
+            "name": "stimulir-install-test",
+            "version": "1.0.0",
+            "private": true,
+            "type": "module"
+          }
+          EOF
+
+      - name: Install every @stimulir/code-runtime-* package
+        working-directory: /tmp/install-test
+        run: |
+          npm install --no-audit --no-fund \
+            @stimulir/code-runtime-core \
+            @stimulir/code-runtime-host \
+            @stimulir/code-runtime-pi \
+            @stimulir/code-runtime-codex \
+            @stimulir/code-runtime-claude-code \
+            @stimulir/code-runtime-opencode \
+            @stimulir/code-runtime-vibe \
+            @stimulir/code-runtime-fs \
+            @stimulir/code-runtime-git \
+            @stimulir/code-runtime-sandbox \
+            @stimulir/code-runtime-software
+
+      - name: Smoke-test that each package exposes its main entry
+        working-directory: /tmp/install-test
+        run: |
+          node --input-type=module -e "
+          const pkgs = [
+            '@stimulir/code-runtime-core',
+            '@stimulir/code-runtime-host',
+            '@stimulir/code-runtime-pi',
+            '@stimulir/code-runtime-codex',
+            '@stimulir/code-runtime-claude-code',
+            '@stimulir/code-runtime-opencode',
+            '@stimulir/code-runtime-vibe',
+            '@stimulir/code-runtime-fs',
+            '@stimulir/code-runtime-git',
+            '@stimulir/code-runtime-sandbox',
+            '@stimulir/code-runtime-software',
+          ];
+          let failed = 0;
+          for (const name of pkgs) {
+            try {
+              const mod = await import(name);
+              const keys = Object.keys(mod);
+              console.log('OK  ' + name + ' (' + keys.length + ' exports)');
+            } catch (e) {
+              console.error('FAIL ' + name + ': ' + e.message);
+              failed++;
+            }
+          }
+          if (failed) process.exit(1);
+          "
+
+      - name: Summary
+        if: success()
+        run: echo "All 11 @stimulir/code-runtime-* packages install + import cleanly."

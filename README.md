@@ -1,6 +1,6 @@
 # @stimulir/code-runtime
 
-> **Stimulir-maintained fork of [Rivet's agentOS](https://github.com/rivet-dev/agent-os).** Apache-2.0. Same architecture as upstream, with extension packages for Stimulir's task-authoring and RL-eval pipelines.
+> **Stimulir-maintained fork of [Rivet's agentOS](https://github.com/rivet-dev/agent-os).** Apache-2.0. Same architecture as upstream, with extension packages for Stimulir.
 
 ```bash
 # Install directly from GitHub

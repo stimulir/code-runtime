@@ -219,10 +219,18 @@ export async function spawnAcpClient(
 	}
 
 	// ── Handshake: initialize → session/new ──
+	//
+	// The ACP zod schema (zNewSessionRequest in @agentclientprotocol/sdk)
+	// requires BOTH `cwd: string` AND `mcpServers: McpServer[]`. Empty
+	// array is the canonical "no MCP servers" form — leaving the field
+	// off entirely makes the upstream binary reject the request with
+	// "Invalid params" in <1s before any agent work begins. Bug reproed
+	// against @rivet-dev/agent-os-claude@0.1.1 / claude-sdk-acp.
 	await send("initialize", { protocolVersion: 1 });
-	const sessRes = (await send("session/new", { cwd: opts.cwd })) as
-		| Record<string, unknown>
-		| undefined;
+	const sessRes = (await send("session/new", {
+		cwd: opts.cwd,
+		mcpServers: [],
+	})) as Record<string, unknown> | undefined;
 	sessionId = (sessRes?.sessionId as string) ?? `acp-${Date.now()}`;
 
 	return {

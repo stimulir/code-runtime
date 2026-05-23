@@ -1,6 +1,6 @@
 {
 	"name": "@stimulir/code-runtime-core",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Stimulir-flavored thin wrapper over @rivet-dev/agent-os-core. Re-exports the upstream API and adds createStimulirAgentSession(spec) — a single-call helper that does the explicit AuthStorage / ModelRegistry / SettingsManager / DefaultResourceLoader / SessionManager wire-up the upstream silently fails to require. Eliminates the silent-no-engagement footgun for every downstream adapter.",
 	"type": "module",
 	"license": "Apache-2.0",

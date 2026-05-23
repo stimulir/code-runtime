@@ -31,6 +31,15 @@ core
 core.*
 **/core
 **/core.*
+# Exception: the Stimulir core package's directory name collides with the
+# core-dump pattern. Surgically un-ignore only the source-controlled files —
+# NOT node_modules/ or dist/ inside it (those stay ignored via their own
+# rules elsewhere, but the wildcard exception above would override them).
+!registry/stimulir/core
+!registry/stimulir/core/package.json
+!registry/stimulir/core/tsconfig.json
+!registry/stimulir/core/src
+!registry/stimulir/core/src/**
 
 # Secrets
 secrets/**/*

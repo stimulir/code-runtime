@@ -5,6 +5,9 @@ packages:
   - registry/agent/*
   - registry/file-system/*
   - registry/tool/*
+  # Stimulir-flavored thin wrappers — additive alongside upstream, never
+  # modify @rivet-dev/* packages so `pnpm run sync:upstream` stays clean.
+  - registry/stimulir/*
 
 ignoredBuiltDependencies:
   - '@clerk/shared'

@@ -1,0 +1,49 @@
+{
+	"name": "@stimulir/code-runtime-host",
+	"version": "0.1.0",
+	"description": "Portable host-side runtime primitives for Stimulir code-runtime adapters: trajectory writer, per-tool-call watchdog, end-of-run process cleanup. Ported from the Lemon Tasker (rl-env) golden-standard implementation.",
+	"type": "module",
+	"license": "Apache-2.0",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./trajectory": {
+			"types": "./dist/trajectory.d.ts",
+			"import": "./dist/trajectory.js",
+			"default": "./dist/trajectory.js"
+		},
+		"./watchdog": {
+			"types": "./dist/watchdog.d.ts",
+			"import": "./dist/watchdog.js",
+			"default": "./dist/watchdog.js"
+		},
+		"./cleanup": {
+			"types": "./dist/cleanup.d.ts",
+			"import": "./dist/cleanup.js",
+			"default": "./dist/cleanup.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"check-types": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.2",
+		"typescript": "^5.7.2"
+	},
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/stimulir/code-runtime.git"
+	}
+}

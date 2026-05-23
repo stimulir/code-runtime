@@ -40,9 +40,16 @@ If you're in CI, `secrets.GITHUB_TOKEN` (the auto-provisioned token) has
 | `@stimulir/code-runtime-opencode` | OpenCode ACP subprocess adapter (`createOpenCodeAdapter`). |
 | `@stimulir/code-runtime-vibe` | Mistral Vibe ACP subprocess adapter (`createVibeAdapter`) — composes default + user AGENTS.md (Vibe REPLACES rather than appends). |
 | `@stimulir/code-runtime-fs` | Filesystem driver aggregator (`createFsBackend(kind, options)` for s3 / google-drive / local). |
-| `@stimulir/code-runtime-git` | git WASM software + JS helper (`gitClone` / `gitCommit` / `gitDiff` / `gitStatus` / `gitBranch`). |
+| `@stimulir/code-runtime-git` | git WASM software + JS helper (`gitClone` / `gitCommit` / `gitDiff` / `gitStatus` / `gitBranch`). _Tarball published; install blocked on upstream `@rivet-dev/agent-os-{git,registry-types}` not being on npmjs._ |
 | `@stimulir/code-runtime-sandbox` | Re-exports `@rivet-dev/agent-os-sandbox` toolkit. |
-| `@stimulir/code-runtime-software` | Meta-bundle of WASM software (`codingAgentBundle`, `dataAnalysisBundle`, `networkingBundle`, `archiveBundle`, `buildBundle`, `everythingBundle`). |
+| `@stimulir/code-runtime-software` | Meta-bundle of WASM software (`codingAgentBundle`, `dataAnalysisBundle`, `networkingBundle`, `archiveBundle`, `buildBundle`, `everythingBundle`). _Tarball published; install blocked on upstream missing several WASM pkgs (`curl`, `duckdb`, `everything`, `http-get`, `make`, `sqlite3`, `wget`) on npmjs._ |
+
+> ⚠️ `@stimulir/code-runtime-git` and `@stimulir/code-runtime-software` are
+> published to GitHub Packages but their upstream `@rivet-dev/agent-os-*`
+> peer packages aren't on npmjs. Until they're mirrored to GitHub Packages
+> under `@stimulir/*`, those two packages can only be consumed inside this
+> monorepo (via `workspace:*`). Tracked as the follow-up task **"Mirror
+> upstream-only @rivet-dev pkgs to GitHub Packages."**
 
 ## Releasing a new version
 

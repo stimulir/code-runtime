@@ -90,15 +90,23 @@ export interface AcpClient {
 }
 
 /**
- * Default best-effort event translator. Handles the common ACP shapes:
+ * Default best-effort event translator. Handles every sessionUpdate shape
+ * defined by the @agentclientprotocol/sdk schema (zSessionUpdate):
  *
- *   - `{sessionUpdate: "agent_message_chunk", content: {type: "text", text}}` → text_delta
- *   - `{sessionUpdate: "tool_call_update", toolCallId, status, kind, content, fieldMeta}` →
- *      tool_execution_start | tool_execution_update | tool_execution_end | tool_execution_error
- *   - Other notifications: emit as `session_meta` with the raw payload.
+ *   user_message_chunk       → text_delta (channel=user)
+ *   agent_message_chunk      → text_delta (channel=assistant)
+ *   agent_thought_chunk      → text_delta (channel=thinking)
+ *   tool_call                → tool_execution_start
+ *   tool_call_update         → tool_execution_{start,update,end,error}
+ *   plan                     → session_meta (carries goals + status)
+ *   available_commands_update → session_meta
+ *   current_mode_update      → session_meta
+ *   config_option_update     → session_meta
+ *   session_info_update      → session_meta
+ *   usage_update             → session_meta
  *
- * Adapter-specific translators may override this to handle SDK quirks
- * (e.g. Vibe's `ReasoningEvent` → tagged text_delta).
+ * Adapter-specific translators may extend this to handle SDK quirks
+ * (e.g. Vibe's `ReasoningEvent`).
  */
 export function defaultAcpTranslate(notif: unknown): CanonicalEvent | null {
 	if (!notif || typeof notif !== "object") return null;
@@ -107,10 +115,36 @@ export function defaultAcpTranslate(notif: unknown): CanonicalEvent | null {
 	if (!update) {
 		return { type: "session_meta", raw: n };
 	}
-	if (update === "agent_message_chunk") {
+	// Content chunks — text delta with channel tag so downstream tooling
+	// can distinguish thinking vs assistant vs (echoed) user content.
+	if (
+		update === "agent_message_chunk" ||
+		update === "agent_thought_chunk" ||
+		update === "user_message_chunk"
+	) {
 		const content = n.content as Record<string, unknown> | undefined;
 		const text = (content?.text as string | undefined) ?? "";
-		return { type: "text_delta", text };
+		const channel =
+			update === "agent_thought_chunk"
+				? "thinking"
+				: update === "user_message_chunk"
+					? "user"
+					: "assistant";
+		return { type: "text_delta", text, channel };
+	}
+	// Initial tool announcement — the Claude SDK emits this BEFORE the
+	// tool runs. Map to tool_execution_start so watchdogs + analyzers
+	// register the inflight call immediately. `title` carries the tool
+	// label (Bash / Read / Edit etc.); `kind` is the ACP category
+	// (execute / read / edit etc.). Either makes a reasonable toolName.
+	if (update === "tool_call") {
+		const toolCallId = (n.toolCallId ?? n.tool_call_id) as string | undefined;
+		const toolName = (n.title ?? n.kind) as string | undefined;
+		const args =
+			(n.rawInput as Record<string, unknown> | undefined) ??
+			(n.content as Record<string, unknown> | undefined) ??
+			{};
+		return { type: "tool_execution_start", toolCallId, toolName, args };
 	}
 	if (update === "tool_call_update") {
 		const status = (n.status as string | undefined) ?? "in_progress";
@@ -118,22 +152,41 @@ export function defaultAcpTranslate(notif: unknown): CanonicalEvent | null {
 		const fieldMeta = (n.fieldMeta ?? n.field_meta) as
 			| Record<string, unknown>
 			| undefined;
-		const toolName = (fieldMeta?.tool_name ?? n.kind) as string | undefined;
-		const args = (n.content as Record<string, unknown> | undefined) ?? {};
-		if (status === "in_progress" || status === "started") {
+		const toolName = (n.title ??
+			fieldMeta?.tool_name ??
+			n.kind) as string | undefined;
+		const args =
+			(n.rawInput as Record<string, unknown> | undefined) ??
+			(n.content as Record<string, unknown> | undefined) ??
+			{};
+		if (status === "pending" || status === "in_progress" || status === "started") {
 			return { type: "tool_execution_start", toolCallId, toolName, args };
 		}
 		if (status === "completed") {
-			return { type: "tool_execution_end", toolCallId, toolName, result: n.content };
+			return {
+				type: "tool_execution_end",
+				toolCallId,
+				toolName,
+				result: n.content ?? n.rawOutput,
+			};
 		}
 		if (status === "error" || status === "failed") {
-			return { type: "tool_execution_error", toolCallId, toolName, isError: true, result: n.content };
+			return {
+				type: "tool_execution_error",
+				toolCallId,
+				toolName,
+				isError: true,
+				result: n.content ?? n.rawOutput,
+			};
 		}
 		return { type: "tool_execution_update", toolCallId, toolName, args };
 	}
 	if (update === "turn_end" || update === "agent_turn_end") {
 		return { type: "turn_end" };
 	}
+	// Plan / mode / config / session_info / usage updates — preserve
+	// the raw payload as session_meta so downstream consumers can opt
+	// in if they care.
 	return { type: "session_meta", raw: n };
 }
 

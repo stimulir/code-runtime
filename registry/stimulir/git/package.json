@@ -1,6 +1,6 @@
 {
 	"name": "@stimulir/code-runtime-git",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "Stimulir's git derivative. Re-exports the @rivet-dev/agent-os-git WASM software package descriptor + adds typed JS helpers (clone, commit, diff, status, branch) that wrap the underlying `git` command so adapters don't shell out manually.",
 	"type": "module",
 	"license": "Apache-2.0",

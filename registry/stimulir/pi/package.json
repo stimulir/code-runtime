@@ -1,0 +1,46 @@
+{
+	"name": "@stimulir/code-runtime-pi",
+	"version": "0.1.0",
+	"description": "Stimulir-flavored Pi adapter. Wraps @rivet-dev/agent-os-pi + @mariozechner/pi-coding-agent with explicit AuthStorage/ModelRegistry/SettingsManager/ResourceLoader/SessionManager wire-up (the Lemon Tasker golden standard). Exposes createPiAdapter(spec) — a single-call session factory that materializes per-session Pi config, calls createStimulirAgentSession, and returns a session you can subscribe + prompt on.",
+	"type": "module",
+	"license": "Apache-2.0",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./config": {
+			"types": "./dist/config.d.ts",
+			"import": "./dist/config.js",
+			"default": "./dist/config.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@stimulir/code-runtime-core": "workspace:*",
+		"@stimulir/code-runtime-host": "workspace:*",
+		"@rivet-dev/agent-os-pi": "workspace:*",
+		"@mariozechner/pi-coding-agent": "^0.60.0",
+		"@mariozechner/pi-ai": "^0.60.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.2",
+		"typescript": "^5.7.2"
+	},
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/stimulir/code-runtime.git"
+	}
+}

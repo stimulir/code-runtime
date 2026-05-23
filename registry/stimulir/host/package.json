@@ -29,6 +29,11 @@
 			"types": "./dist/cleanup.d.ts",
 			"import": "./dist/cleanup.js",
 			"default": "./dist/cleanup.js"
+		},
+		"./acp-client": {
+			"types": "./dist/acp-client.d.ts",
+			"import": "./dist/acp-client.js",
+			"default": "./dist/acp-client.js"
 		}
 	},
 	"scripts": {

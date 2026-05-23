@@ -1026,6 +1026,44 @@ importers:
         specifier: ^5.9.2
         version: 5.9.3
 
+  registry/stimulir/claude-code:
+    dependencies:
+      '@rivet-dev/agent-os-claude':
+        specifier: workspace:*
+        version: link:../../agent/claude
+      '@stimulir/code-runtime-core':
+        specifier: workspace:*
+        version: link:../core
+      '@stimulir/code-runtime-host':
+        specifier: workspace:*
+        version: link:../host
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  registry/stimulir/codex:
+    dependencies:
+      '@rivet-dev/agent-os-codex-agent':
+        specifier: workspace:*
+        version: link:../../agent/codex
+      '@stimulir/code-runtime-core':
+        specifier: workspace:*
+        version: link:../core
+      '@stimulir/code-runtime-host':
+        specifier: workspace:*
+        version: link:../host
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   registry/stimulir/core:
     dependencies:
       '@rivet-dev/agent-os-core':
@@ -1042,7 +1080,206 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  registry/stimulir/fs:
+    dependencies:
+      '@rivet-dev/agent-os-core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@rivet-dev/agent-os-google-drive':
+        specifier: workspace:*
+        version: link:../../file-system/google-drive
+      '@rivet-dev/agent-os-s3':
+        specifier: workspace:*
+        version: link:../../file-system/s3
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  registry/stimulir/git:
+    dependencies:
+      '@rivet-dev/agent-os-git':
+        specifier: workspace:*
+        version: link:../../software/git
+      '@rivet-dev/agent-os-registry-types':
+        specifier: workspace:*
+        version: link:../../../packages/registry-types
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   registry/stimulir/host:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  registry/stimulir/opencode:
+    dependencies:
+      '@rivet-dev/agent-os-opencode':
+        specifier: workspace:*
+        version: link:../../agent/opencode
+      '@stimulir/code-runtime-core':
+        specifier: workspace:*
+        version: link:../core
+      '@stimulir/code-runtime-host':
+        specifier: workspace:*
+        version: link:../host
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  registry/stimulir/pi:
+    dependencies:
+      '@mariozechner/pi-ai':
+        specifier: ^0.60.0
+        version: 0.60.0(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6))(bufferutil@4.1.0)(ws@8.20.0(bufferutil@4.1.0))(zod@4.3.6)
+      '@mariozechner/pi-coding-agent':
+        specifier: ^0.60.0
+        version: 0.60.0(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6))(bufferutil@4.1.0)(ws@8.20.0(bufferutil@4.1.0))(zod@4.3.6)
+      '@rivet-dev/agent-os-pi':
+        specifier: workspace:*
+        version: link:../../agent/pi
+      '@stimulir/code-runtime-core':
+        specifier: workspace:*
+        version: link:../core
+      '@stimulir/code-runtime-host':
+        specifier: workspace:*
+        version: link:../host
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  registry/stimulir/sandbox:
+    dependencies:
+      '@rivet-dev/agent-os-sandbox':
+        specifier: workspace:*
+        version: link:../../tool/sandbox
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  registry/stimulir/software:
+    dependencies:
+      '@rivet-dev/agent-os-build-essential':
+        specifier: workspace:*
+        version: link:../../software/build-essential
+      '@rivet-dev/agent-os-common':
+        specifier: workspace:*
+        version: link:../../software/common
+      '@rivet-dev/agent-os-coreutils':
+        specifier: workspace:*
+        version: link:../../software/coreutils
+      '@rivet-dev/agent-os-curl':
+        specifier: workspace:*
+        version: link:../../software/curl
+      '@rivet-dev/agent-os-diffutils':
+        specifier: workspace:*
+        version: link:../../software/diffutils
+      '@rivet-dev/agent-os-duckdb':
+        specifier: workspace:*
+        version: link:../../software/duckdb
+      '@rivet-dev/agent-os-everything':
+        specifier: workspace:*
+        version: link:../../software/everything
+      '@rivet-dev/agent-os-fd':
+        specifier: workspace:*
+        version: link:../../software/fd
+      '@rivet-dev/agent-os-file':
+        specifier: workspace:*
+        version: link:../../software/file
+      '@rivet-dev/agent-os-findutils':
+        specifier: workspace:*
+        version: link:../../software/findutils
+      '@rivet-dev/agent-os-gawk':
+        specifier: workspace:*
+        version: link:../../software/gawk
+      '@rivet-dev/agent-os-git':
+        specifier: workspace:*
+        version: link:../../software/git
+      '@rivet-dev/agent-os-grep':
+        specifier: workspace:*
+        version: link:../../software/grep
+      '@rivet-dev/agent-os-gzip':
+        specifier: workspace:*
+        version: link:../../software/gzip
+      '@rivet-dev/agent-os-http-get':
+        specifier: workspace:*
+        version: link:../../software/http-get
+      '@rivet-dev/agent-os-jq':
+        specifier: workspace:*
+        version: link:../../software/jq
+      '@rivet-dev/agent-os-make':
+        specifier: workspace:*
+        version: link:../../software/make
+      '@rivet-dev/agent-os-registry-types':
+        specifier: workspace:*
+        version: link:../../../packages/registry-types
+      '@rivet-dev/agent-os-ripgrep':
+        specifier: workspace:*
+        version: link:../../software/ripgrep
+      '@rivet-dev/agent-os-sed':
+        specifier: workspace:*
+        version: link:../../software/sed
+      '@rivet-dev/agent-os-sqlite3':
+        specifier: workspace:*
+        version: link:../../software/sqlite3
+      '@rivet-dev/agent-os-tar':
+        specifier: workspace:*
+        version: link:../../software/tar
+      '@rivet-dev/agent-os-tree':
+        specifier: workspace:*
+        version: link:../../software/tree
+      '@rivet-dev/agent-os-unzip':
+        specifier: workspace:*
+        version: link:../../software/unzip
+      '@rivet-dev/agent-os-wget':
+        specifier: workspace:*
+        version: link:../../software/wget
+      '@rivet-dev/agent-os-yq':
+        specifier: workspace:*
+        version: link:../../software/yq
+      '@rivet-dev/agent-os-zip':
+        specifier: workspace:*
+        version: link:../../software/zip
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  registry/stimulir/vibe:
+    dependencies:
+      '@stimulir/code-runtime-core':
+        specifier: workspace:*
+        version: link:../core
+      '@stimulir/code-runtime-host':
+        specifier: workspace:*
+        version: link:../host
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
@@ -2061,6 +2298,7 @@ packages:
   '@mariozechner/pi-agent-core@0.60.0':
     resolution: {integrity: sha512-1zQcfFp8r0iwZCxCBQ9/ccFJoagns68cndLPTJJXl1ZqkYirzSld1zBOPxLAgeAKWIz3OX8dB2WQwTJFhmEojQ==}
     engines: {node: '>=20.0.0'}
+    deprecated: please use @earendil-works/pi-agent-core instead going forward
 
   '@mariozechner/pi-ai@0.60.0':
     resolution: {integrity: sha512-OiMuXQturnEDPmA+ho7eLe4G8plO2z21yjNMs9niQREauoblWOz7Glv58I66KPzczLED4aZTlQLTRdU6t1rz8A==}
@@ -2070,11 +2308,13 @@ packages:
   '@mariozechner/pi-coding-agent@0.60.0':
     resolution: {integrity: sha512-IOv7cTU4nbznFNUE5ofi13k2dmSG39coBoGWIBQTVw3iVyl0HxuHbg0NiTx3ktrPIDNtkii+y7tWXzWqwoo4lw==}
     engines: {node: '>=20.6.0'}
+    deprecated: please use @earendil-works/pi-coding-agent instead going forward
     hasBin: true
 
   '@mariozechner/pi-tui@0.60.0':
     resolution: {integrity: sha512-ZAK5gxYhGmfJqMjfWcRBjB8glITltDbTrYJXvcDtfengbKTZN0p39p5uO5pvUB8/PiAWKTRS06yaNMhf/LG26g==}
     engines: {node: '>=20.0.0'}
+    deprecated: please use @earendil-works/pi-tui instead going forward
 
   '@mistralai/mistralai@1.14.1':
     resolution: {integrity: sha512-IiLmmZFCCTReQgPAT33r7KQ1nYo5JPdvGkrkZqA8qQ2qB1GHgs5LoP5K2ICyrjnpw2n8oSxMM/VP+liiKcGNlQ==}

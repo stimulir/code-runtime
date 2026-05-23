@@ -1,0 +1,29 @@
+{
+	"name": "@stimulir/code-runtime-fs",
+	"version": "0.1.0",
+	"description": "Stimulir filesystem aggregator. Re-exports every upstream FS mount driver — createS3Backend, createGoogleDriveBackend, createHostDirBackend — under one import so Lemon Tasker (and any other consumer) can mount any FS uniformly via createFsBackend(kind, options).",
+	"type": "module",
+	"license": "Apache-2.0",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": ["dist"],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": { "build": "tsc", "check-types": "tsc --noEmit" },
+	"dependencies": {
+		"@rivet-dev/agent-os-core": "workspace:*",
+		"@rivet-dev/agent-os-s3": "workspace:*",
+		"@rivet-dev/agent-os-google-drive": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.2",
+		"typescript": "^5.7.2"
+	},
+	"publishConfig": { "registry": "https://npm.pkg.github.com" },
+	"repository": { "type": "git", "url": "git+https://github.com/stimulir/code-runtime.git" }
+}

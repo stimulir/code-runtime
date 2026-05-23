@@ -1,0 +1,27 @@
+{
+	"name": "@stimulir/code-runtime-sandbox",
+	"version": "0.1.0",
+	"description": "Stimulir sandbox toolkit wrapper. Re-exports @rivet-dev/agent-os-sandbox toolkit + provides a place for the sandbox-mounting drivers (local, docker, e2b) when they're vendored. Upstream sandbox drivers live in rivet-dev/rivet/agent-os/packages and are pulled in lazily on demand.",
+	"type": "module",
+	"license": "Apache-2.0",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": ["dist"],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": { "build": "tsc", "check-types": "tsc --noEmit" },
+	"dependencies": {
+		"@rivet-dev/agent-os-sandbox": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.2",
+		"typescript": "^5.7.2"
+	},
+	"publishConfig": { "registry": "https://npm.pkg.github.com" },
+	"repository": { "type": "git", "url": "git+https://github.com/stimulir/code-runtime.git" }
+}

@@ -1,0 +1,53 @@
+{
+	"name": "@stimulir/code-runtime-software",
+	"version": "0.1.0",
+	"description": "Stimulir software meta-package. Re-exports the upstream WASM software bundle every coding agent depends on (coreutils, common, git, curl, jq, ripgrep, fd, findutils, sed, grep, gawk, tar, gzip, make, plus diffutils/tree/file/sqlite3/zip/unzip/wget/yq/duckdb). Provides preset bundles — codingAgentBundle, dataAnalysisBundle — so AgentOs.create({software: codingAgentBundle}) is one import.",
+	"type": "module",
+	"license": "Apache-2.0",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": ["dist"],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": { "build": "tsc", "check-types": "tsc --noEmit" },
+	"dependencies": {
+		"@rivet-dev/agent-os-build-essential": "workspace:*",
+		"@rivet-dev/agent-os-common": "workspace:*",
+		"@rivet-dev/agent-os-coreutils": "workspace:*",
+		"@rivet-dev/agent-os-curl": "workspace:*",
+		"@rivet-dev/agent-os-diffutils": "workspace:*",
+		"@rivet-dev/agent-os-duckdb": "workspace:*",
+		"@rivet-dev/agent-os-everything": "workspace:*",
+		"@rivet-dev/agent-os-fd": "workspace:*",
+		"@rivet-dev/agent-os-file": "workspace:*",
+		"@rivet-dev/agent-os-findutils": "workspace:*",
+		"@rivet-dev/agent-os-gawk": "workspace:*",
+		"@rivet-dev/agent-os-git": "workspace:*",
+		"@rivet-dev/agent-os-grep": "workspace:*",
+		"@rivet-dev/agent-os-gzip": "workspace:*",
+		"@rivet-dev/agent-os-http-get": "workspace:*",
+		"@rivet-dev/agent-os-jq": "workspace:*",
+		"@rivet-dev/agent-os-make": "workspace:*",
+		"@rivet-dev/agent-os-ripgrep": "workspace:*",
+		"@rivet-dev/agent-os-sed": "workspace:*",
+		"@rivet-dev/agent-os-sqlite3": "workspace:*",
+		"@rivet-dev/agent-os-tar": "workspace:*",
+		"@rivet-dev/agent-os-tree": "workspace:*",
+		"@rivet-dev/agent-os-unzip": "workspace:*",
+		"@rivet-dev/agent-os-wget": "workspace:*",
+		"@rivet-dev/agent-os-yq": "workspace:*",
+		"@rivet-dev/agent-os-zip": "workspace:*",
+		"@rivet-dev/agent-os-registry-types": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.2",
+		"typescript": "^5.7.2"
+	},
+	"publishConfig": { "registry": "https://npm.pkg.github.com" },
+	"repository": { "type": "git", "url": "git+https://github.com/stimulir/code-runtime.git" }
+}

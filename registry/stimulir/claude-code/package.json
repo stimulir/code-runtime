@@ -1,0 +1,29 @@
+{
+	"name": "@stimulir/code-runtime-claude-code",
+	"version": "0.1.0",
+	"description": "Stimulir-flavored Claude Code adapter. Spawns @rivet-dev/agent-os-claude's `claude-sdk-acp` binary as a subprocess, translates ACP sessionUpdate notifications into Stimulir's canonical trajectory event shape, returns an AgentSessionLike with the same .subscribe / .prompt surface as the Pi adapter.",
+	"type": "module",
+	"license": "Apache-2.0",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": ["dist"],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": { "build": "tsc", "check-types": "tsc --noEmit" },
+	"dependencies": {
+		"@stimulir/code-runtime-core": "workspace:*",
+		"@stimulir/code-runtime-host": "workspace:*",
+		"@rivet-dev/agent-os-claude": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.2",
+		"typescript": "^5.7.2"
+	},
+	"publishConfig": { "registry": "https://npm.pkg.github.com" },
+	"repository": { "type": "git", "url": "git+https://github.com/stimulir/code-runtime.git" }
+}

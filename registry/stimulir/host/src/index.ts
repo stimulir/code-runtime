@@ -47,3 +47,12 @@ export {
 } from "./watchdog.js";
 
 export { killProcessesReferencingPath } from "./cleanup.js";
+
+export {
+	spawnAcpClient,
+	defaultAcpTranslate,
+	type AcpClient,
+	type AcpSpawnOptions,
+	type CanonicalEvent,
+	type CanonicalEventType,
+} from "./acp-client.js";

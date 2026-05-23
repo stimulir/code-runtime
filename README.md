@@ -13,8 +13,8 @@ pnpm add github:stimulir/code-runtime#main
 | Install | `github:stimulir/code-runtime#<branch-or-sha>` — no npm publish |
 | License | Apache-2.0 (inherited from upstream) |
 | Upstream | [`rivet-dev/agent-os`](https://github.com/rivet-dev/agent-os) — synced periodically via `pnpm run sync:upstream` |
-| Maintainer | Stimulir Limited ([`@tosi-n`](https://github.com/tosi-n)) |
-| Production users | Stimulir Console; Lemon RL-eval pilot |
+| Maintainer | [`@tosi-n`](https://github.com/tosi-n) |
+| Live in | Stimulir Console |
 
 **Why a fork?** Stimulir needs a single, supported runtime version across its products, the freedom to land extension points ahead of upstream's release cadence, and a clear authoritative source for security review.
 

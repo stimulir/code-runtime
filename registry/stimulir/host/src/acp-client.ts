@@ -223,7 +223,9 @@ export function defaultAcpTranslate(notif: unknown): CanonicalEvent | null {
 // fs through node:fs/promises, and spawn shell commands for terminals.
 
 interface TerminalState {
-	child: ChildProcess;
+	// child may be missing when spawn failed synchronously — methods
+	// below tolerate a null child by treating the terminal as exited.
+	child: ChildProcess | null;
 	// Bounded ring of captured output. The agent polls via terminalOutput
 	// without waiting; we truncate from the start once outputByteLimit
 	// is exceeded so long-running processes don't OOM the runner.
@@ -326,27 +328,68 @@ class LemonAcpClient implements Client {
 		for (const e of p.env ?? []) {
 			if (e?.name) env[e.name] = String(e.value ?? "");
 		}
-		const child = spawn(p.command, p.args ?? [], {
-			cwd: p.cwd ?? undefined,
-			env,
-			stdio: ["ignore", "pipe", "pipe"],
-		});
+		// Decide between direct exec and shell exec:
+		//   - If args is non-empty → agent gave us a clean argv pair, exec
+		//     directly via spawn(command, args) — fastest path, no shell.
+		//   - If args is empty/missing → agent gave us a single command
+		//     string that may contain shell metacharacters (pipes, redirects,
+		//     `cd && ...`, etc.). Mistral Vibe and OpenCode both send their
+		//     Bash tool calls this way. Run through `sh -c` so the shell
+		//     parses the line correctly.
+		const needsShell = !p.args || p.args.length === 0;
+		const spawnCommand = needsShell ? "/bin/sh" : p.command;
+		const spawnArgs = needsShell ? ["-c", p.command] : (p.args ?? []);
 		const limit = p.outputByteLimit ?? 1_048_576; // 1 MiB default
 		const state: TerminalState = {
-			child,
+			child: null as unknown as ChildProcess, // populated below
 			output: Buffer.alloc(0),
 			outputByteLimit: limit,
 			truncated: false,
 			exitCode: null,
 			signal: null,
-			exitPromise: new Promise<void>((resolve) => {
-				child.on("exit", (code, signal) => {
-					state.exitCode = code;
-					state.signal = signal;
-					resolve();
-				});
-			}),
+			exitPromise: Promise.resolve(),
 		};
+		let exitResolve!: () => void;
+		state.exitPromise = new Promise<void>((resolve) => {
+			exitResolve = resolve;
+		});
+		let child: ChildProcess;
+		try {
+			child = spawn(spawnCommand, spawnArgs, {
+				cwd: p.cwd ?? undefined,
+				env,
+				stdio: ["ignore", "pipe", "pipe"],
+			});
+		} catch (e) {
+			// Synchronous spawn failure (e.g. EACCES on the binary path).
+			// Surface as a non-zero exitCode rather than throwing — the
+			// agent then sees the tool result as a normal command failure
+			// and can recover (which is what real shells would do).
+			state.exitCode = 127;
+			exitResolve();
+			const terminalId = randomUUID();
+			state.output = Buffer.from(`spawn error: ${(e as Error).message}\n`);
+			this.terminals.set(terminalId, state);
+			return { terminalId } as CreateTerminalResponse;
+		}
+		state.child = child;
+		// CRITICAL: bind an 'error' listener so an ENOENT (binary not
+		// found, etc.) doesn't bubble as an unhandled 'error' event and
+		// crash the host. The agent will see the non-zero exitCode via
+		// terminalOutput / waitForTerminalExit and recover.
+		child.on("error", (err) => {
+			const msg = `spawn error: ${(err as Error).message}\n`;
+			state.output = Buffer.concat([state.output, Buffer.from(msg)]);
+			if (state.exitCode === null) {
+				state.exitCode = 127;
+				exitResolve();
+			}
+		});
+		child.on("exit", (code, signal) => {
+			state.exitCode = code;
+			state.signal = signal;
+			exitResolve();
+		});
 		const append = (chunk: Buffer) => {
 			state.output = Buffer.concat([state.output, chunk]);
 			if (state.output.byteLength > state.outputByteLimit) {
@@ -407,16 +450,17 @@ class LemonAcpClient implements Client {
 	): Promise<KillTerminalResponse> {
 		const p = params as unknown as { terminalId: string };
 		const t = this.terminals.get(p.terminalId);
-		if (!t) return {} as KillTerminalResponse;
+		if (!t || !t.child) return {} as KillTerminalResponse;
 		try {
 			t.child.kill("SIGTERM");
 		} catch {
 			// already dead
 		}
 		// Escalate to SIGKILL after 3s
+		const child = t.child;
 		setTimeout(() => {
 			try {
-				t.child.kill("SIGKILL");
+				child.kill("SIGKILL");
 			} catch {
 				/* ignore */
 			}
@@ -429,24 +473,26 @@ class LemonAcpClient implements Client {
 	): Promise<ReleaseTerminalResponse> {
 		const p = params as unknown as { terminalId: string };
 		const t = this.terminals.get(p.terminalId);
-		if (t) {
+		if (t && t.child) {
 			try {
 				t.child.kill("SIGTERM");
 			} catch {
 				/* ignore */
 			}
-			this.terminals.delete(p.terminalId);
 		}
+		this.terminals.delete(p.terminalId);
 		return {} as ReleaseTerminalResponse;
 	}
 
 	// Killswitch for session teardown — release every terminal we still hold.
 	releaseAll(): void {
 		for (const [id, t] of this.terminals) {
-			try {
-				t.child.kill("SIGTERM");
-			} catch {
-				/* ignore */
+			if (t.child) {
+				try {
+					t.child.kill("SIGTERM");
+				} catch {
+					/* ignore */
+				}
 			}
 			this.terminals.delete(id);
 		}

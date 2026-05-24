@@ -1,6 +1,6 @@
 {
 	"name": "@stimulir/code-runtime-fs",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"description": "Stimulir filesystem aggregator. Re-exports every upstream FS mount driver — createS3Backend, createGoogleDriveBackend, createHostDirBackend — under one import so Lemon Tasker (and any other consumer) can mount any FS uniformly via createFsBackend(kind, options).",
 	"type": "module",
 	"license": "Apache-2.0",

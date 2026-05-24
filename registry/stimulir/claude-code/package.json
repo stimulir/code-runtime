@@ -1,6 +1,6 @@
 {
 	"name": "@stimulir/code-runtime-claude-code",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"description": "Stimulir-flavored Claude Code adapter. Spawns @rivet-dev/agent-os-claude's `claude-sdk-acp` binary as a subprocess, translates ACP sessionUpdate notifications into Stimulir's canonical trajectory event shape, returns an AgentSessionLike with the same .subscribe / .prompt surface as the Pi adapter.",
 	"type": "module",
 	"license": "Apache-2.0",

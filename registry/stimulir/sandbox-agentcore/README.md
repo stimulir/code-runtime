@@ -18,8 +18,13 @@ lightweight session handles; all heavy execution runs in AWS.
   process grew **+86MB**, 8/8 in 1.9s — OOM source eliminated
   (`lemon-tasker/scripts/agentcore_scalability_test.py`).
 - *TS client:* `exec` / `run` / `writeFile` + `readFile` round-trip all pass against
-  a live Code Interpreter session (`scripts/agentcore-smoke.mjs`,
-  `AWS_REGION=eu-west-2 node scripts/agentcore-smoke.mjs`).
+  a live Code Interpreter session, and a non-zero command surfaces its **exact**
+  exit code (`exit 3` → `exitCode 3`, from `structuredContent` — not coerced from
+  the tool-level `isError` flag). `scripts/agentcore-smoke.mjs`,
+  `AWS_REGION=eu-west-2 node scripts/agentcore-smoke.mjs`.
+- *Staging:* `writeFiles` auto-creates nested dirs (`tests/test.sh`) and shares the
+  working directory with `executeCommand`, so a staged bundle + `bash tests/test.sh`
+  works directly (default cwd `/opt/amazon/genesis1p-tools/var`).
 
 ## Two integration shapes
 

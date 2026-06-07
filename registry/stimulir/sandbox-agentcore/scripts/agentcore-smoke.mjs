@@ -30,6 +30,12 @@ async function main() {
 		process.stdout.write(`[smoke] readFile=${JSON.stringify(readBack)}\n`);
 		assert(readBack.includes(content), "writeFile/readFile round-tripped content");
 
+		// Regression guard (the original smoke only checked happy-path exit 0):
+		// the REAL non-zero exit code must surface, not a coerced 1.
+		const failed = await box.exec("echo out; echo err >&2; exit 3");
+		process.stdout.write(`[smoke] exit-3 exitCode=${failed.exitCode} stderr=${JSON.stringify(failed.stderr)}\n`);
+		assert(failed.exitCode === 3, `non-zero exit surfaces exact code (got ${failed.exitCode})`);
+
 		process.stdout.write("[smoke] PASS\n");
 		return 0;
 	} catch (err) {

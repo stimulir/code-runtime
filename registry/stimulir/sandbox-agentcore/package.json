@@ -1,6 +1,6 @@
 {
   "name": "@stimulir/code-runtime-sandbox-agentcore",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Bedrock AgentCore Code Interpreter sandbox provider for code-runtime. Offloads agent tool-execution (bash/read/write/run) to AWS-managed, per-session sandboxes so the service container memory stays flat under concurrency — fixes the in-process OOM.",
   "type": "module",
   "main": "./dist/index.js",

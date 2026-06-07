@@ -1,0 +1,41 @@
+{
+  "name": "@stimulir/code-runtime-sandbox-agentcore",
+  "version": "0.1.6",
+  "description": "Bedrock AgentCore Code Interpreter sandbox provider for code-runtime. Offloads agent tool-execution (bash/read/write/run) to AWS-managed, per-session sandboxes so the service container memory stays flat under concurrency — fixes the in-process OOM.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stimulir/code-runtime.git"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agentcore": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "peerDependencies": {
+    "@rivet-dev/agent-os-core": "*",
+    "@rivet-dev/agent-os-sandbox": "*"
+  },
+  "peerDependenciesMeta": {
+    "@rivet-dev/agent-os-core": { "optional": true },
+    "@rivet-dev/agent-os-sandbox": { "optional": true }
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

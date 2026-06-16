@@ -16,7 +16,6 @@
  * ``baseToolsOverride`` exactly as the AgentCore tools are wired.
  */
 
-import type { AgentTool } from "@mariozechner/pi-agent-core";
 import {
 	createBashTool,
 	createReadTool,
@@ -27,15 +26,21 @@ import {
 	createLsTool,
 } from "@mariozechner/pi-coding-agent";
 
-/** The seven host-direct Pi tools — same shape as AgentCorePiTools. */
+/**
+ * The seven host-direct Pi tools, keyed by name — same shape as
+ * ``AgentCorePiTools``. Values are Pi ``AgentTool`` instances; typed loosely so
+ * this package needs no direct ``@mariozechner/pi-agent-core`` dependency
+ * (``AgentTool`` is not re-exported from ``pi-coding-agent``). Consumers spread
+ * the bundle into an ``AgentSession``'s ``baseToolsOverride``.
+ */
 export interface LocalPiTools {
-	bash: AgentTool<any>;
-	read: AgentTool<any>;
-	write: AgentTool<any>;
-	edit: AgentTool<any>;
-	find: AgentTool<any>;
-	grep: AgentTool<any>;
-	ls: AgentTool<any>;
+	bash: ReturnType<typeof createBashTool>;
+	read: ReturnType<typeof createReadTool>;
+	write: ReturnType<typeof createWriteTool>;
+	edit: ReturnType<typeof createEditTool>;
+	find: ReturnType<typeof createFindTool>;
+	grep: ReturnType<typeof createGrepTool>;
+	ls: ReturnType<typeof createLsTool>;
 }
 
 /**

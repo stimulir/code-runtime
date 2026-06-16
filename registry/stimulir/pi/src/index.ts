@@ -54,6 +54,10 @@ export {
 	type MaterializedPiConfig,
 } from "./config.js";
 
+// Host-direct Pi tool bundle (the local-FS counterpart to the AgentCore tools).
+export { createLocalPiTools } from "./tools.js";
+export type { LocalPiTools } from "./tools.js";
+
 // ── Pi SDK loader ───────────────────────────────────────────────────────
 
 /**

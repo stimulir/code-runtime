@@ -1,0 +1,37 @@
+{
+  "name": "@stimulir/code-runtime-pi-agentcore",
+  "version": "0.1.0",
+  "description": "AgentCore-backed Pi coding tools (bash/read/write/edit/find/grep/ls) + a direct Pi AgentSession wired via baseToolsOverride, so a lightweight in-process Pi agent runs its live tool calls inside AWS Bedrock AgentCore sandboxes — the OOM-free, horizontally-scalable alternative to an in-process VM.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stimulir/code-runtime.git"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@stimulir/code-runtime-sandbox-agentcore": "workspace:*",
+    "@mariozechner/pi-coding-agent": "^0.60.0",
+    "@mariozechner/pi-agent-core": "^0.60.0",
+    "@mariozechner/pi-ai": "^0.60.0",
+    "@sinclair/typebox": "0.34.49"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

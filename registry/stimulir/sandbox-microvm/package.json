@@ -1,0 +1,41 @@
+{
+  "name": "@stimulir/code-runtime-sandbox-microvm",
+  "version": "0.1.0",
+  "description": "AWS Lambda MicroVM sandbox provider for code-runtime. A Firecracker microVM (bring-your-own image — Chromium, Python, any apt package) replaces the managed AgentCore code-interpreter: full OS control, native per-session secret injection via runHookPayload, 8h suspend/resume, VM-level isolation. eu-west-1.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "image", "README.md"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stimulir/code-runtime.git"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aws-sdk/client-lambda-microvms": "^3.1089.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "peerDependencies": {
+    "@rivet-dev/agent-os-core": "*",
+    "@rivet-dev/agent-os-sandbox": "*"
+  },
+  "peerDependenciesMeta": {
+    "@rivet-dev/agent-os-core": { "optional": true },
+    "@rivet-dev/agent-os-sandbox": { "optional": true }
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}
